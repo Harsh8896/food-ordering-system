@@ -60,8 +60,9 @@ urlpatterns = [
     path('restaurants/', restaurant_list, name='restaurant_list'),
     path('restaurants/<int:id>/', restaurant_detail, name='restaurant_detail'),
     path('restaurants/<int:id>/suspend/', restaurant_suspend, name='restaurant_suspend'),
-    path('platform-settings/', platform_settings, name='platform_settings'),
     path('restaurant-owner-login/', restaurant_owner_login, name='restaurant_owner_login'),
     path('delivered-orders/<int:user_id>/', delivered_orders_for_user, name='delivered_orders_for_user'),
+    path('master-foods/', master_food_list),
+    path('master-foods/<int:id>/', master_food_detail),
 
 ]

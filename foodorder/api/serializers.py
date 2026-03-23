@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import *
-from datetime import date
 
 class CategorySerializers(serializers.ModelSerializer):
     class Meta:
@@ -9,7 +8,8 @@ class CategorySerializers(serializers.ModelSerializer):
 
 class FoodSerializers(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.category_name', read_only=True)
-    restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)  # ← ye add karo
+    restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)  # ← add
+    restaurant_location = serializers.CharField(source='restaurant.location', read_only=True)
     image = serializers.ImageField(required=False)
     is_available = serializers.BooleanField(default=True)
 
@@ -17,7 +17,7 @@ class FoodSerializers(serializers.ModelSerializer):
         model = Food
         fields = [
             'id', 'category', 'category_name',
-            'restaurant', 'restaurant_name',       # ← ye add karo
+            'restaurant', 'restaurant_name', 'restaurant_location',   # ← add
             'item_name', 'item_price', 'item_description',
             'image', 'item_quantity', 'is_available'
         ]
@@ -133,17 +133,9 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Restaurant
-        fields = [
-            'id', 'name', 'owner_email', 'owner_password',
-            'location', 'subscription_plan', 'subscription_expiry',
-            'status', 'created_date', 'days_left'
-        ]
+        fields = '__all__'
 
     def get_days_left(self, obj):
-        delta = obj.subscription_expiry - date.today()
-        return delta.days
-    
-class PlatformSettingsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PlatformSettings
-        fields = '__all__'
+        from datetime import date
+        return (obj.subscription_expiry - date.today()).days
+
