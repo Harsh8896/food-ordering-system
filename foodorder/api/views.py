@@ -136,11 +136,33 @@ def food_search(request):
 
 @api_view(["GET"])
 def random_foods(request):
-    foods = list(Food.objects.all())
-    random.shuffle(foods)
-    limited_foods = foods[0:9]
-    serializer = FoodSerializers(limited_foods, many=True)
-    return Response(serializer.data)
+    """Purana endpoint — ab saare foods return karta hai rating ke saath (limit nahi)"""
+    foods = Food.objects.all().order_by('?')
+    result = []
+    for food in foods:
+        reviews = Review.objects.filter(food=food)
+        avg = reviews.aggregate(average=Avg('rating'))['average'] or 0
+        total = reviews.count()
+        breakdown = {
+            entry['rating']: entry['count']
+            for entry in reviews.values('rating').annotate(count=Count('rating'))
+        }
+        result.append({
+            'id': food.id,
+            'type': 'restaurant',
+            'item_name': food.item_name,
+            'item_description': food.item_description,
+            'item_price': str(food.item_price),
+            'image': food.image.url if food.image else None,
+            'category_name': food.category.category_name if food.category else None,
+            'restaurant_name': food.restaurant.name if food.restaurant else None,
+            'restaurant_location': food.restaurant.location if food.restaurant else None,
+            'is_available': food.is_available,
+            'average_rating': round(avg, 1),
+            'total_reviews': total,
+            'breakdown': breakdown,
+        })
+    return Response(result)
 
 
 from django.contrib.auth.hashers import make_password
@@ -1080,4 +1102,97 @@ def master_food_detail(request, id):
         'image': request.build_absolute_uri(food.image.url) if food.image else None,
         'category': food.category,
         'restaurants': restaurant_data,
+    })
+
+
+
+@api_view(["GET"])
+def home_feed(request):
+    master_food_names = MasterFood.objects.values_list("name", flat=True)
+
+    # ✅ Sirf normal restaurant foods
+    restaurant_foods = (
+        Food.objects
+        .select_related("category", "restaurant")
+        .filter(is_available=True)
+        .filter(is_master_food=False)
+        .exclude(item_name__in=master_food_names)
+        .order_by("-id")
+    )
+
+    restaurant_foods_data = []
+    for food in restaurant_foods:
+        reviews = Review.objects.filter(food=food)
+        avg = reviews.aggregate(average=Avg("rating"))["average"] or 0
+        total = reviews.count()
+        rating_breakdown = reviews.values("rating").annotate(count=Count("rating"))
+        breakdown = {entry["rating"]: entry["count"] for entry in rating_breakdown}
+
+        restaurant_foods_data.append({
+            "id": food.id,
+            "item_name": food.item_name,
+            "item_description": food.item_description,
+            "item_price": str(food.item_price),
+            "image": food.image.url if food.image else None,
+            "category_name": food.category.category_name if food.category else None,
+            "restaurant_name": food.restaurant.name if food.restaurant else None,
+            "restaurant_location": food.restaurant.location if food.restaurant else None,
+            "is_available": food.is_available,
+            "average_rating": round(avg, 1),
+            "total_reviews": total,
+            "breakdown": breakdown,
+        })
+
+    # ✅ Sirf multi-restaurant comparison cards
+    master_foods = MasterFood.objects.all().order_by("-id")
+
+    master_foods_data = []
+    for master in master_foods:
+        menu_items = (
+            RestaurantMenuItem.objects
+            .filter(master_food=master, restaurant__status="active")
+            .select_related("restaurant", "food")
+        )
+
+        restaurants = []
+        prices = []
+
+        for item in menu_items:
+            food_obj = item.food
+
+            avg = 0
+            total = 0
+
+            if food_obj:
+                reviews = Review.objects.filter(food=food_obj)
+                avg = reviews.aggregate(average=Avg("rating"))["average"] or 0
+                total = reviews.count()
+
+            restaurants.append({
+                "restaurant_id": item.restaurant.id,
+                "restaurant_name": item.restaurant.name,
+                "location": item.restaurant.location,
+                "food_id": food_obj.id if food_obj else None,
+                "price": str(item.price),
+                "is_available": item.is_available,
+                "average_rating": round(avg, 1),
+                "total_reviews": total,
+            })
+
+            prices.append(item.price)
+
+        master_foods_data.append({
+            "id": master.id,
+            "item_name": master.name,
+            "item_description": master.description,
+            "image": master.image.url if master.image else None,
+            "category_name": master.category,
+            "restaurant_count": len(restaurants),
+            "min_price": str(min(prices)) if prices else "0.00",
+            "restaurants": restaurants,
+        })
+
+    return Response({
+        "restaurant_foods": restaurant_foods_data,
+        "master_foods": master_foods_data,
     })

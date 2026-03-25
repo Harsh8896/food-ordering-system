@@ -28,7 +28,7 @@ class Food(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     item_name = models.CharField(max_length=50)
     item_price = models.DecimalField(max_digits=10, decimal_places=2)
-    item_description = models.TextField(max_length=500, null=True, blank=True)
+    item_description = models.TextField(max_length=500, null=True, blank=False)
     image = models.ImageField(upload_to="food_images/")
     item_quantity = models.CharField(max_length=50)
     is_available = models.BooleanField(default=True)
