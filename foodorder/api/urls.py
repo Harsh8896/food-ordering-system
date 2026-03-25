@@ -64,5 +64,6 @@ urlpatterns = [
     path('delivered-orders/<int:user_id>/', delivered_orders_for_user, name='delivered_orders_for_user'),
     path('master-foods/', master_food_list),
     path('master-foods/<int:id>/', master_food_detail),
+    path('home-feed/', home_feed, name='home_feed'),
 
 ]
