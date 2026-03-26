@@ -106,10 +106,11 @@ class FoodTrackingSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     food_name = serializers.CharField(source='food.item_name', read_only=True)
+    restaurant_name = serializers.CharField(source='food.restaurant.name', read_only=True)
 
     class Meta:
         model = Review
-        fields = ['id', 'user', 'user_name', 'food', 'food_name', 'rating', 'comment', 'created_at']
+        fields = ['id', 'user', 'user_name', 'food', 'food_name', 'restaurant_name', 'rating', 'comment', 'created_at']
 
     def get_user_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}"
