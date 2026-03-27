@@ -80,8 +80,12 @@ WSGI_APPLICATION = 'foodorder.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'django_db_hvuc',
+        'USER': 'django_db_hvuc_user',
+        'PASSWORD': 'xgrVD94i95Qq3FtgpyHCie2QYJVb2hwp',
+        'HOST': 'dpg-d737bc7fte5s73est2b0-a',
+        'PORT': '5432',
     }
 }
 
