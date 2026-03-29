@@ -93,7 +93,9 @@ def list_foods(request):
             item_name__in=master_food_names
         )
     else:
-        foods = Food.objects.exclude(
+        foods = Food.objects.filter(
+            restaurant__is_discarded=False
+        ).exclude(
             item_name__in=master_food_names
         )
     
@@ -203,7 +205,7 @@ def food_detail(request, id):
 
     restaurant_data = []
     try:
-        restaurants = Restaurant.objects.filter(status='active')
+        restaurants = Restaurant.objects.filter(status='active', is_discarded=False)
         for restaurant in restaurants:
             restaurant_food = Food.objects.filter(
                 restaurant=restaurant,
@@ -1028,7 +1030,8 @@ def master_food_list(request):
     for food in foods:
         menu_items = RestaurantMenuItem.objects.filter(
             master_food=food,
-            restaurant__status='active'
+            restaurant__status='active',
+            restaurant__is_discarded=False
         ).select_related('restaurant')
 
         available_items = [m for m in menu_items if m.is_available and m.price > 0]  # ✅
@@ -1054,7 +1057,8 @@ def master_food_detail(request, id):
 
     menu_items = RestaurantMenuItem.objects.filter(
         master_food=food,
-        restaurant__status='active'
+        restaurant__status='active',
+        restaurant__is_discarded=False
     ).select_related('restaurant', 'food')
 
     restaurant_data = []
@@ -1116,6 +1120,7 @@ def home_feed(request):
         .select_related("category", "restaurant")
         .filter(is_available=True)
         .filter(is_master_food=False)
+        .filter(restaurant__is_discarded=False)
         .exclude(item_name__in=master_food_names)
         .order_by("-id")
     )
@@ -1150,7 +1155,7 @@ def home_feed(request):
     for master in master_foods:
         menu_items = (
             RestaurantMenuItem.objects
-            .filter(master_food=master, restaurant__status="active")
+            .filter(master_food=master, restaurant__status="active", restaurant__is_discarded=False)
             .select_related("restaurant", "food")
         )
 
@@ -1196,3 +1201,17 @@ def home_feed(request):
         "restaurant_foods": restaurant_foods_data,
         "master_foods": master_foods_data,
     })
+
+@api_view(['PUT'])
+def restaurant_discard(request, id):
+    try:
+        restaurant = Restaurant.objects.get(id=id)
+        restaurant.is_discarded = not restaurant.is_discarded
+        restaurant.save()
+        action = "discarded" if restaurant.is_discarded else "restored"
+        return Response({
+            'message': f'Restaurant {action} successfully',
+            'is_discarded': restaurant.is_discarded
+        }, status=200)
+    except Restaurant.DoesNotExist:
+        return Response({'error': 'Restaurant not found'}, status=404)
