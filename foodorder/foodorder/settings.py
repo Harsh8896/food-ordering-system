@@ -87,7 +87,7 @@ if os.getenv("RENDER"):
             'NAME': 'django_db_hvuc',
             'USER': 'django_db_hvuc_user',
             'PASSWORD': 'xgrVD94i95Qq3FtgpyHCie2QYJVb2hwp',
-            'HOST': 'dpg-d737bc7fte5s73est2b0-a',
+            'HOST': 'dpg-d737bc7fte5s73est2b0-a.singapore-postgres.render.com',
             'PORT': '5432',
         }
     }
@@ -139,4 +139,4 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
-MEDIA_BASE = BASE_DIR / "media"
+MEDIA_ROOT = BASE_DIR / "media"
