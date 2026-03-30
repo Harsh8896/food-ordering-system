@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'api',
     "corsheaders",
     'rest_framework',
-    'storages',  # ADD THIS
+    'storages',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -93,12 +93,13 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Supabase S3 Storage
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-AWS_ACCESS_KEY_ID = os.getenv('49bab0d9804d8c88fb15c373924351cd')
-AWS_SECRET_ACCESS_KEY = os.getenv('df9b8c8a6d8f12c3638e4485083e09ad8a8d01e519f3a0f4c32cf9bef5ae7007')
+AWS_ACCESS_KEY_ID = os.getenv('SUPABASE_ACCESS_KEY')
+AWS_SECRET_ACCESS_KEY = os.getenv('SUPABASE_SECRET_KEY')
 AWS_STORAGE_BUCKET_NAME = 'media'
-AWS_S3_ENDPOINT_URL = 'https://eynolkwnzoheaxkezbbs.storage.supabase.co/storage/v1/s3'
+AWS_S3_ENDPOINT_URL = 'https://eynolkwnzoheaxkezbbs.supabase.co/storage/v1/s3'
 AWS_S3_REGION_NAME = 'ap-northeast-1'
 AWS_DEFAULT_ACL = 'public-read'
 AWS_QUERYSTRING_AUTH = False
+AWS_S3_ADDRESSING_STYLE = "path"
 
 MEDIA_URL = 'https://eynolkwnzoheaxkezbbs.supabase.co/storage/v1/object/public/media/'
