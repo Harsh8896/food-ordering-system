@@ -3,12 +3,15 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-48rjmo@lnkvv+_w%w1bww165oiu%@%+=+rejw5*@#*td4%=8x*'
+SECRET_KEY = 'django-insecure-CHANGE-THIS-IN-PRODUCTION'
 
 DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
+# ======================
+# INSTALLED APPS
+# ======================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -16,18 +19,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'api',
-    "corsheaders",
+    'corsheaders',
     'rest_framework',
-    'storages',
+    'storages',  # ✅ required for S3
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
-
+# ======================
+# MIDDLEWARE
+# ======================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "corsheaders.middleware.CorsMiddleware",
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -36,12 +43,16 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 ROOT_URLCONF = 'foodorder.urls'
 
+# ======================
+# TEMPLATES
+# ======================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -55,6 +66,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodorder.wsgi.application'
 
+# ======================
+# DATABASE
+# ======================
 if os.getenv("RENDER"):
     DATABASES = {
         'default': {
@@ -74,6 +88,9 @@ else:
         }
     }
 
+# ======================
+# PASSWORD VALIDATION
+# ======================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -81,25 +98,49 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# ======================
+# INTERNATIONALIZATION
+# ======================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# ======================
+# STATIC FILES
+# ======================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Supabase S3 Storage
+# ======================
+# 🔥 SUPABASE S3 STORAGE (FINAL)
+# ======================
+
+# IMPORTANT
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 AWS_ACCESS_KEY_ID = os.getenv('SUPABASE_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.getenv('SUPABASE_SECRET_KEY')
+
+# Bucket name (same as Supabase)
 AWS_STORAGE_BUCKET_NAME = 'media'
+
+# Supabase S3 endpoint
 AWS_S3_ENDPOINT_URL = 'https://eynolkwnzoheaxkezbbs.supabase.co/storage/v1/s3'
-AWS_S3_REGION_NAME = 'ap-northeast-1'
+
+# REQUIRED SETTINGS
+AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_DEFAULT_ACL = 'public-read'
 AWS_QUERYSTRING_AUTH = False
+AWS_S3_FILE_OVERWRITE = False
 AWS_S3_ADDRESSING_STYLE = "path"
 
+# Public URL
 MEDIA_URL = 'https://eynolkwnzoheaxkezbbs.supabase.co/storage/v1/object/public/media/'
+
+# ======================
+# DEFAULT PRIMARY KEY
+# ======================
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
