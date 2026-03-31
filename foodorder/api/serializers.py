@@ -10,7 +10,7 @@ class FoodSerializers(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.category_name', read_only=True)
     restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)  # ← add
     restaurant_location = serializers.CharField(source='restaurant.location', read_only=True)
-    image = serializers.ImageField(required=False)
+    image = serializers.ImageField(use_url=True, required=False)
     is_available = serializers.BooleanField(default=True)
 
     class Meta:
