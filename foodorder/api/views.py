@@ -1215,3 +1215,16 @@ def restaurant_discard(request, id):
         }, status=200)
     except Restaurant.DoesNotExist:
         return Response({'error': 'Restaurant not found'}, status=404)
+    
+
+
+
+@api_view(['GET'])
+def test_cloudinary(request):
+    import cloudinary
+    cfg = cloudinary.config()
+    return Response({
+        "cloud_name": cfg.cloud_name,
+        "api_key": cfg.api_key,
+        "api_secret": "SET" if cfg.api_secret else "NOT SET",
+    })

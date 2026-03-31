@@ -66,5 +66,6 @@ urlpatterns = [
     path('master-foods/<int:id>/', master_food_detail),
     path('home-feed/', home_feed, name='home_feed'),
     path('restaurants/<int:id>/discard/', restaurant_discard, name='restaurant_discard'),
+    path('test-cloudinary/', test_cloudinary),
 
 ]
