@@ -1034,17 +1034,10 @@ def master_food_list(request):
             restaurant__is_discarded=False
         ).select_related('restaurant')
 
-        available_items = [m for m in menu_items if m.is_available and m.price > 0]  # ✅
+        available_items = [m for m in menu_items if m.is_available and m.price > 0]
 
-        # ✅ FIX: Get absolute Cloudinary URL
-        image_url = None
-        if food.image:
-            if hasattr(food.image, 'url'):
-                img_url = food.image.url
-                # If relative path, build absolute; if already Cloudinary, keep as-is
-                image_url = img_url if img_url.startswith('http') else request.build_absolute_uri(img_url)
-            else:
-                image_url = food.image
+        # ✅ Seedha .url use karo — Cloudinary automatically absolute URL deta hai
+        image_url = food.image.url if food.image else None
 
         result.append({
             'id': food.id,
@@ -1053,7 +1046,7 @@ def master_food_list(request):
             'image': image_url,
             'category': food.category,
             'restaurant_count': menu_items.count(),
-            'min_price': str(min([m.price for m in available_items], default=0)),  # ✅
+            'min_price': str(min([m.price for m in available_items], default=0)),
         })
     return Response(result)
 
