@@ -1268,3 +1268,18 @@ def test_cloudinary(request):
         "api_key": cfg.api_key,
         "api_secret": "SET" if cfg.api_secret else "NOT SET",
     })
+
+@api_view(['GET'])
+def debug_settings(request):
+    from django.conf import settings
+    import cloudinary
+    cfg = cloudinary.config()
+    return Response({
+        'DEFAULT_FILE_STORAGE': settings.DEFAULT_FILE_STORAGE,
+        'CLOUDINARY_STORAGE': getattr(settings, 'CLOUDINARY_STORAGE', 'NOT SET'),
+        'MEDIA_ROOT': str(getattr(settings, 'MEDIA_ROOT', 'NOT SET')),
+        'MEDIA_URL': settings.MEDIA_URL,
+        'cloud_name': cfg.cloud_name,
+        'api_key': cfg.api_key,
+        'api_secret': 'SET' if cfg.api_secret else 'NOT SET',
+    })
