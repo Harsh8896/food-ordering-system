@@ -89,16 +89,22 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ── Media Files ── ✅ Yeh missing tha
+# ── Media Files ──
 MEDIA_URL = '/media/'
 
-# ── Cloudinary Config ── ✅ secure=True add kiya
+# ── Cloudinary Config ──
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
     api_key=os.getenv("API_KEY"),
     api_secret=os.getenv("API_SECRET"),
-    secure=True  # ✅ Yeh zaroori hai — HTTPS URL milega
+    secure=True
 )
 
-# ── File Storage ──
+# ✅ Yeh CLOUDINARY_STORAGE dict missing tha — yahi fix hai
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv("CLOUD_NAME"),
+    'API_KEY': os.getenv("API_KEY"),
+    'API_SECRET': os.getenv("API_SECRET"),
+}
+
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
