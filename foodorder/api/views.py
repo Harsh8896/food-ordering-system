@@ -1036,11 +1036,21 @@ def master_food_list(request):
 
         available_items = [m for m in menu_items if m.is_available and m.price > 0]  # ✅
 
+        # ✅ FIX: Get absolute Cloudinary URL
+        image_url = None
+        if food.image:
+            if hasattr(food.image, 'url'):
+                img_url = food.image.url
+                # If relative path, build absolute; if already Cloudinary, keep as-is
+                image_url = img_url if img_url.startswith('http') else request.build_absolute_uri(img_url)
+            else:
+                image_url = food.image
+
         result.append({
             'id': food.id,
             'name': food.name,
             'description': food.description,
-            'image': request.build_absolute_uri(food.image.url) if food.image else None,
+            'image': image_url,
             'category': food.category,
             'restaurant_count': menu_items.count(),
             'min_price': str(min([m.price for m in available_items], default=0)),  # ✅
@@ -1099,11 +1109,21 @@ def master_food_detail(request, id):
             'food_id': item.food.id if item.food else None,
         })
 
+    # ✅ FIX: Get absolute Cloudinary URL
+    image_url = None
+    if food.image:
+        if hasattr(food.image, 'url'):
+            img_url = food.image.url
+            # If relative path, build absolute; if already Cloudinary, keep as-is
+            image_url = img_url if img_url.startswith('http') else request.build_absolute_uri(img_url)
+        else:
+            image_url = food.image
+
     return Response({
         'id': food.id,
         'name': food.name,
         'description': food.description,
-        'image': request.build_absolute_uri(food.image.url) if food.image else None,
+        'image': image_url,
         'category': food.category,
         'restaurants': restaurant_data,
     })
@@ -1133,12 +1153,22 @@ def home_feed(request):
         rating_breakdown = reviews.values("rating").annotate(count=Count("rating"))
         breakdown = {entry["rating"]: entry["count"] for entry in rating_breakdown}
 
+        # ✅ FIX: Get absolute Cloudinary URL
+        image_url = None
+        if food.image:
+            if hasattr(food.image, 'url'):
+                img_url = food.image.url
+                # If relative path, build absolute; if already Cloudinary, keep as-is
+                image_url = img_url if img_url.startswith('http') else request.build_absolute_uri(img_url)
+            else:
+                image_url = food.image
+
         restaurant_foods_data.append({
             "id": food.id,
             "item_name": food.item_name,
             "item_description": food.item_description,
             "item_price": str(food.item_price),
-            "image": food.image.url if food.image else None,
+            "image": image_url,
             "category_name": food.category.category_name if food.category else None,
             "restaurant_name": food.restaurant.name if food.restaurant else None,
             "restaurant_location": food.restaurant.location if food.restaurant else None,
@@ -1186,11 +1216,21 @@ def home_feed(request):
 
             prices.append(item.price)
 
+        # ✅ FIX: Get absolute Cloudinary URL
+        image_url = None
+        if master.image:
+            if hasattr(master.image, 'url'):
+                img_url = master.image.url
+                # If relative path, build absolute; if already Cloudinary, keep as-is
+                image_url = img_url if img_url.startswith('http') else request.build_absolute_uri(img_url)
+            else:
+                image_url = master.image
+
         master_foods_data.append({
             "id": master.id,
             "item_name": master.name,
             "item_description": master.description,
-            "image": master.image.url if master.image else None,
+            "image": image_url,
             "category_name": master.category,
             "restaurant_count": len(restaurants),
             "min_price": str(min(prices)) if prices else "0.00",

@@ -91,6 +91,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Media Files ──
 MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'  # ✅ REQUIRED for Cloudinary to work
 
 # ── Cloudinary Config ──
 cloudinary.config(
@@ -100,7 +101,7 @@ cloudinary.config(
     secure=True
 )
 
-# ✅ Yeh CLOUDINARY_STORAGE dict missing tha — yahi fix hai
+# ✅ Correct format for cloudinary-storage
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv("CLOUD_NAME"),
     'API_KEY': os.getenv("API_KEY"),
