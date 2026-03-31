@@ -1,14 +1,18 @@
 from pathlib import Path
 import os
+import cloudinary
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-48rjmo@lnkvv+_w%w1bww165oiu%@%+=+rejw5*@#*td4%=8x*'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-temp-key")
 
 DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
+# =========================
+# INSTALLED APPS
+# =========================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -16,13 +20,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'api',
     "corsheaders",
     'rest_framework',
+
+    # Cloudinary
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
+# =========================
+# CORS
+# =========================
 CORS_ALLOW_ALL_ORIGINS = True
 
+# =========================
+# MIDDLEWARE
+# =========================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -37,6 +52,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'foodorder.urls'
 
+# =========================
+# TEMPLATES
+# =========================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -54,14 +72,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodorder.wsgi.application'
 
+# =========================
+# DATABASE
+# =========================
 if os.getenv("RENDER"):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'django_db_hvuc',
-            'USER': 'django_db_hvuc_user',
-            'PASSWORD': 'xgrVD94i95Qq3FtgpyHCie2QYJVb2hwp',
-            'HOST': 'dpg-d737bc7fte5s73est2b0-a.singapore-postgres.render.com',
+            'NAME': os.getenv("DB_NAME"),
+            'USER': os.getenv("DB_USER"),
+            'PASSWORD': os.getenv("DB_PASSWORD"),
+            'HOST': os.getenv("DB_HOST"),
             'PORT': '5432',
         }
     }
@@ -73,6 +94,9 @@ else:
         }
     }
 
+# =========================
+# PASSWORD VALIDATION
+# =========================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -80,16 +104,33 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# =========================
+# INTERNATIONALIZATION
+# =========================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# =========================
+# STATIC FILES
+# =========================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
 WHITENOISE_AUTOREFRESH = True
+
+# =========================
+# CLOUDINARY CONFIG
+# =========================
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET")
+)
+
+# =========================
+# FILE STORAGE (IMPORTANT)
+# =========================
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
