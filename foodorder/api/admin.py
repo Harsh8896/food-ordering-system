@@ -23,7 +23,6 @@ def create_or_update_owner_user(restaurant):
     restaurant.save()
 
 
-# ── Restaurant ──
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
     list_display = ('name', 'owner_email', 'location', 'subscription_plan', 'status', 'created_date')
@@ -31,7 +30,6 @@ class RestaurantAdmin(admin.ModelAdmin):
     search_fields = ('name', 'owner_email')
 
     def save_model(self, request, obj, form, change):
-        # ✅ Sirf owner user create karo — MasterFood wala code nahi
         super().save_model(request, obj, form, change)
         create_or_update_owner_user(obj)
 
@@ -42,7 +40,6 @@ class RestaurantAdmin(admin.ModelAdmin):
         return qs.filter(owner=request.user)
 
 
-# ── MasterFood — Super Admin only ──
 @admin.register(MasterFood)
 class MasterFoodAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'created_date', 'restaurant_count')
@@ -60,9 +57,9 @@ class MasterFoodAdmin(admin.ModelAdmin):
         return qs.none()
 
     def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)  # ✅ Pehle save — Cloudinary pe jayegi
+        super().save_model(request, obj, form, change)  # ✅ Pehle save — Cloudinary pe upload hogi
 
-        if not change:  # Sirf naya MasterFood add hone par
+        if not change:
             active_restaurants = Restaurant.objects.filter(status='active')
             for restaurant in active_restaurants:
                 menu_item, created = RestaurantMenuItem.objects.get_or_create(
@@ -86,7 +83,7 @@ class MasterFoodAdmin(admin.ModelAdmin):
                             'category': cat,
                             'item_price': 0,
                             'item_quantity': '1',
-                            'image': obj.image.name,  # ✅ .name use karo
+                            'image': obj.image,  # ✅ FIX: .name hata diya
                             'is_available': False,
                             'is_master_food': True,
                         }
@@ -95,7 +92,6 @@ class MasterFoodAdmin(admin.ModelAdmin):
                     menu_item.save()
 
 
-# ── RestaurantMenuItem — Restaurant Owner only ──
 @admin.register(RestaurantMenuItem)
 class RestaurantMenuItemAdmin(admin.ModelAdmin):
     fields = ('master_food', 'price', 'is_available', 'description', 'prep_time')
@@ -151,12 +147,9 @@ class RestaurantMenuItemAdmin(admin.ModelAdmin):
             return False
 
     def has_delete_permission(self, request, obj=None):
-        if request.user.is_superuser:
-            return True
-        return False
+        return request.user.is_superuser
 
 
-# ── Food ──
 @admin.register(Food)
 class FoodAdmin(admin.ModelAdmin):
     list_display = ('item_name', 'get_restaurant', 'category', 'item_price', 'is_available')
@@ -196,7 +189,6 @@ class FoodAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-# ── Category ──
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('category_name', 'get_restaurant', 'creation_date')
@@ -226,7 +218,6 @@ class CategoryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-# ── Order Address ──
 @admin.register(OrderAddress)
 class OrderAddressAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'get_customer', 'order_final_status', 'order_time')
@@ -251,7 +242,6 @@ class OrderAddressAdmin(admin.ModelAdmin):
             return qs.none()
 
 
-# ── Order ──
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'user', 'food', 'quantity', 'is_order_placed')
@@ -268,7 +258,6 @@ class OrderAdmin(admin.ModelAdmin):
             return qs.none()
 
 
-# ── Food Tracking ──
 @admin.register(FoodTracking)
 class FoodTrackingAdmin(admin.ModelAdmin):
     list_display = ('get_order_no', 'get_user_name', 'status', 'order_cancelled_by_user', 'status_date')
@@ -296,7 +285,6 @@ class FoodTrackingAdmin(admin.ModelAdmin):
             return qs.none()
 
 
-# ── User ──
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ('id', 'first_name', 'last_name', 'email', 'mobile', 'reg_date')
@@ -309,7 +297,6 @@ class UserAdmin(admin.ModelAdmin):
         return qs.none()
 
 
-# ── Reviews ──
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ('food', 'user', 'rating', 'created_at')
@@ -326,7 +313,6 @@ class ReviewAdmin(admin.ModelAdmin):
             return qs.none()
 
 
-# ── Payment ──
 @admin.register(PaymentDetail)
 class PaymentDetailAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'user', 'payment_mode', 'payment_date')
@@ -339,7 +325,6 @@ class PaymentDetailAdmin(admin.ModelAdmin):
         return qs.none()
 
 
-# ── Platform Settings ──
 @admin.register(PlatformSettings)
 class PlatformSettingsAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
