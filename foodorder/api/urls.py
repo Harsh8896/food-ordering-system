@@ -68,5 +68,6 @@ urlpatterns = [
     path('restaurants/<int:id>/discard/', restaurant_discard, name='restaurant_discard'),
     path('test-cloudinary/', test_cloudinary),
     path('debug-settings/', debug_settings),
+    path('test-upload/', test_cloudinary_upload),
 
 ]
