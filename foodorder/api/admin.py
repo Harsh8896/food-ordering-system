@@ -31,6 +31,7 @@ class RestaurantAdmin(admin.ModelAdmin):
     search_fields = ('name', 'owner_email')
 
     def save_model(self, request, obj, form, change):
+        # ✅ Sirf owner user create karo — MasterFood wala code nahi
         super().save_model(request, obj, form, change)
         create_or_update_owner_user(obj)
 
@@ -59,22 +60,20 @@ class MasterFoodAdmin(admin.ModelAdmin):
         return qs.none()
 
     def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
+        super().save_model(request, obj, form, change)  # ✅ Pehle save — Cloudinary pe jayegi
 
         if not change:  # Sirf naya MasterFood add hone par
             active_restaurants = Restaurant.objects.filter(status='active')
             for restaurant in active_restaurants:
-                # Har restaurant ke liye RestaurantMenuItem auto create karo
                 menu_item, created = RestaurantMenuItem.objects.get_or_create(
                     restaurant=restaurant,
                     master_food=obj,
                     defaults={
-                        'price': 0,       # Restaurant owner baad mein set karega
-                        'is_available': False,  # Pehle unavailable — owner enable karega
+                        'price': 0,
+                        'is_available': False,
                         'prep_time': '30-45 mins',
                     }
                 )
-                # Food bhi auto create karo
                 if created:
                     cat, _ = Category.objects.get_or_create(
                         category_name="General",
@@ -87,7 +86,7 @@ class MasterFoodAdmin(admin.ModelAdmin):
                             'category': cat,
                             'item_price': 0,
                             'item_quantity': '1',
-                            'image': obj.image,
+                            'image': obj.image.name,  # ✅ .name use karo
                             'is_available': False,
                             'is_master_food': True,
                         }
@@ -99,7 +98,7 @@ class MasterFoodAdmin(admin.ModelAdmin):
 # ── RestaurantMenuItem — Restaurant Owner only ──
 @admin.register(RestaurantMenuItem)
 class RestaurantMenuItemAdmin(admin.ModelAdmin):
-    fields = ('master_food', 'price', 'is_available', 'description' , 'prep_time')
+    fields = ('master_food', 'price', 'is_available', 'description', 'prep_time')
     list_display = ('get_food_name', 'restaurant', 'price', 'is_available', 'prep_time')
     list_filter = ('is_available',)
 
@@ -142,11 +141,9 @@ class RestaurantMenuItemAdmin(admin.ModelAdmin):
                 kwargs['queryset'] = MasterFood.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    # ✅ Fix — super admin add nahi karega, restaurant owner kar sakta hai
     def has_add_permission(self, request):
         if request.user.is_superuser:
-            return False  # Super admin MasterFood se auto add hoga
-        # Restaurant owner add kar sakta hai
+            return False
         try:
             Restaurant.objects.get(owner=request.user)
             return True
