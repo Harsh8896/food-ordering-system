@@ -16,12 +16,12 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',          # ✅ staticfiles se PEHLE
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
     'api',
     'corsheaders',
     'rest_framework',
-    'cloudinary',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -85,7 +85,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ── Static Files ──
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Media Files ──
 MEDIA_URL = '/media/'
@@ -105,4 +104,12 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.getenv("API_SECRET"),
 }
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# ── Django 4.2+ Storage Settings ──
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
