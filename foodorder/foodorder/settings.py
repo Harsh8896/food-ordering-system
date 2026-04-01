@@ -7,9 +7,7 @@ import cloudinary.api
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-temp-key")
-
 DEBUG = False
-
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -18,7 +16,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',
+    'cloudinary_storage',          # ✅ staticfiles se PEHLE
     'django.contrib.staticfiles',
     'api',
     'corsheaders',
@@ -91,7 +89,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Media Files ──
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'  # ✅ REQUIRED for Cloudinary to work
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ── Cloudinary Config ──
 cloudinary.config(
@@ -101,7 +99,6 @@ cloudinary.config(
     secure=True
 )
 
-# ✅ Correct format for cloudinary-storage
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv("CLOUD_NAME"),
     'API_KEY': os.getenv("API_KEY"),
