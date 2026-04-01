@@ -1276,3 +1276,21 @@ def debug_settings(request):
         'api_key': cfg.api_key,
         'api_secret': 'SET' if cfg.api_secret else 'NOT SET',
     })
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def test_cloudinary_upload(request):
+    import cloudinary.uploader
+    try:
+        file = request.FILES.get('image')
+        if not file:
+            return Response({'error': 'No image provided'}, status=400)
+        
+        result = cloudinary.uploader.upload(file)
+        return Response({
+            'success': True,
+            'url': result.get('secure_url'),
+            'public_id': result.get('public_id'),
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
