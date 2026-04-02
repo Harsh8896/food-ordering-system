@@ -3,11 +3,15 @@ import os
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+from dotenv import load_dotenv
+
+# ✅ .env file load karo
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-temp-key")
-DEBUG = False
+DEBUG = os.getenv("DEBUG", "False") == "True"  # ✅ .env se aayega
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -57,14 +61,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodorder.wsgi.application'
 
+# ✅ DB — local aur Render dono pe kaam karega
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv("DB_NAME"),
-        'USER': os.getenv("DB_USER"),
-        'PASSWORD': os.getenv("DB_PASSWORD"),
-        'HOST': os.getenv("DB_HOST"),
-        'PORT': '5432',
+        'NAME': os.getenv("DB_NAME", "food_ordering"),
+        'USER': os.getenv("DB_USER", "postgres"),
+        'PASSWORD': os.getenv("DB_PASSWORD", ""),
+        'HOST': os.getenv("DB_HOST", "localhost"),
+        'PORT': os.getenv("DB_PORT", "5432"),
     }
 }
 
