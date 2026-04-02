@@ -65,16 +65,21 @@ def list_categories(request):
 @api_view(["POST"])
 @parser_classes([MultiPartParser, FormParser])
 def add_food_item(request):
+    # ✅ File size check — 5MB se bada nahi hona chahiye
+    image = request.FILES.get('image')
+    if image and image.size > 5 * 1024 * 1024:  # 5MB
+        return Response({"message": "Image size 5MB se zyada nahi honi chahiye"}, status=400)
+
+    restaurant_id = request.data.get('restaurant')
     serializer = FoodSerializers(data=request.data)
     if serializer.is_valid():
         food = serializer.save()
-        # Restaurant ID manually set karo
-        restaurant_id = request.data.get('restaurant')
         if restaurant_id and restaurant_id != 'null':
             food.restaurant_id = restaurant_id
             food.save()
         return Response({"message": "Food item has been added"}, status=201)
-    return Response({"message": "Something went wrong"}, status=400)
+    print("Serializer errors:", serializer.errors)
+    return Response({"message": str(serializer.errors)}, status=400)
 
 
 
