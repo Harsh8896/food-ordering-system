@@ -109,8 +109,8 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.getenv("API_SECRET"),
 }
 
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "rzp_test_SXX1ULpeISDp4x")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "G2mhw80i40pFm9s5aFlC1WHr")
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 
 # ── Django 4.2+ Storage Settings ──
 STORAGES = {
