@@ -69,5 +69,8 @@ urlpatterns = [
     path('test-cloudinary/', test_cloudinary),
     path('debug-settings/', debug_settings),
     path('test-upload/', test_cloudinary_upload),
+    path('create_razorpay_order/', create_razorpay_order, name='create_razorpay_order'),
+    path('verify_razorpay_payment/', verify_razorpay_payment, name='verify_razorpay_payment'),
+    path('restaurant-sales-summary/<int:restaurant_id>/', restaurant_sales_summary, name='restaurant_sales_summary'),
 
 ]

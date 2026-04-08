@@ -1299,3 +1299,105 @@ def test_cloudinary_upload(request):
         })
     except Exception as e:
         return Response({'error': str(e)}, status=400)
+    
+
+
+import razorpay
+import hmac
+import hashlib
+from django.conf import settings
+
+@api_view(['POST'])
+def create_razorpay_order(request):
+    amount = request.data.get('amount')  # Frontend se paise aayenge (rupees mein)
+    try:
+        client = razorpay.Client(
+            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+        )
+        # Razorpay paise paise (paise) mein leta hai, isliye *100
+        razorpay_order = client.order.create({
+            "amount": int(float(amount) * 100),
+            "currency": "INR",
+            "payment_capture": 1  # Auto capture
+        })
+        return Response({
+            "razorpay_order_id": razorpay_order["id"],
+            "amount": razorpay_order["amount"],
+            "currency": razorpay_order["currency"],
+            "key": settings.RAZORPAY_KEY_ID,
+        }, status=200)
+    except Exception as e:
+        return Response({"message": str(e)}, status=400)
+
+
+@api_view(['POST'])
+def verify_razorpay_payment(request):
+    razorpay_order_id = request.data.get('razorpay_order_id')
+    razorpay_payment_id = request.data.get('razorpay_payment_id')
+    razorpay_signature = request.data.get('razorpay_signature')
+
+    # Signature verify karo
+    body = f"{razorpay_order_id}|{razorpay_payment_id}"
+    expected_signature = hmac.HMAC(
+    settings.RAZORPAY_KEY_SECRET.encode(),
+    body.encode(),
+    hashlib.sha256
+).hexdigest()
+
+    if expected_signature == razorpay_signature:
+        return Response({"verified": True}, status=200)
+    else:
+        return Response({"verified": False, "message": "Payment verification failed"}, status=400)
+
+
+
+@api_view(['GET'])
+def restaurant_sales_summary(request, restaurant_id):
+    today = now().date()
+
+    # ✅ Restaurant ka naam nikalo
+    try:
+        restaurant = Restaurant.objects.get(id=restaurant_id)
+        restaurant_name = restaurant.name
+    except Restaurant.DoesNotExist:
+        return Response({"error": "Restaurant not found"}, status=404)
+
+    def get_rev(start):
+        order_numbers = OrderAddress.objects.filter(
+            order_time__date__gte=start
+        ).values_list('order_number', flat=True)
+
+        return Order.objects.filter(
+            food__restaurant_id=restaurant_id,
+            is_order_placed=True,
+            order_number__in=order_numbers
+        ).annotate(
+            lt=F('quantity') * F('food__item_price')
+        ).aggregate(t=Sum('lt'))['t'] or 0
+
+    # ✅ Total revenue (ALL TIME)
+    total_revenue = Order.objects.filter(
+        food__restaurant_id=restaurant_id,
+        is_order_placed=True
+    ).annotate(
+        lt=F('quantity') * F('food__item_price')
+    ).aggregate(t=Sum('lt'))['t'] or 0
+
+    # ✅ Total orders
+    total_orders = Order.objects.filter(
+        food__restaurant_id=restaurant_id,
+        is_order_placed=True
+    ).values('order_number').distinct().count()
+
+    return Response({
+        "restaurant_id": restaurant_id,
+        "restaurant_name": restaurant_name,   # ✅ NEW
+        "total_orders": total_orders,         # ✅
+        "total_revenue": total_revenue,       # ✅ NEW
+
+        # Optional (analytics ke liye useful)
+        "day":   get_rev(today),
+        "week":  get_rev(today - timedelta(days=7)),
+        "month": get_rev(today - timedelta(days=30)),
+        "year":  get_rev(today - timedelta(days=365)),
+    })
