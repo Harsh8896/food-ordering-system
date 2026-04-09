@@ -1028,32 +1028,118 @@ def delivered_orders_for_user(request, user_id):
 
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
+@parser_classes([MultiPartParser, FormParser])
 def master_food_list(request):
-    foods = MasterFood.objects.all().order_by('-created_date')
-    result = []
-    for food in foods:
-        menu_items = RestaurantMenuItem.objects.filter(
-            master_food=food,
-            restaurant__status='active',
-            restaurant__is_discarded=False
-        ).select_related('restaurant')
+ 
+    # ── GET: saari master foods list ──
+    if request.method == 'GET':
+        foods = MasterFood.objects.all().order_by('-created_date')
+        result = []
+        for food in foods:
+            menu_items = RestaurantMenuItem.objects.filter(
+                master_food=food,
+                restaurant__status='active',
+                restaurant__is_discarded=False
+            ).select_related('restaurant')
+ 
+            available_items = [m for m in menu_items if m.is_available and m.price > 0]
+            image_url = food.image.url if food.image else None
+ 
+            result.append({
+                'id': food.id,
+                'name': food.name,
+                'description': food.description,
+                'image': image_url,
+                'category': food.category,
+                'restaurant_count': menu_items.count(),
+                'min_price': str(min([m.price for m in available_items], default=0)),
+            })
+        return Response(result)
+ 
+    # ── POST: naya master food add karo (sirf selected restaurants ke liye) ──
+    if request.method == 'POST':
+        name        = request.data.get('name', '').strip()
+        description = request.data.get('description', '')
+        image       = request.FILES.get('image')
+        category    = request.data.get('category', '')
+        price       = request.data.get('price', '0')
+        prep_time   = request.data.get('prep_time', '30-45 mins')
+ 
+        # restaurant_ids parse karo
+        # Frontend se ["1","2","3"] ya "1,2,3" dono aa sakte hain
+        raw_ids = request.data.getlist('restaurant_ids')
+        if len(raw_ids) == 1 and ',' in raw_ids[0]:
+            raw_ids = [r.strip() for r in raw_ids[0].split(',')]
+        restaurant_ids = [int(r) for r in raw_ids if r.strip().isdigit()]
+ 
+        # Validation
+        if not name:
+            return Response({'error': 'Name required hai'}, status=400)
+        if not image:
+            return Response({'error': 'Image required hai'}, status=400)
+        if not category:
+            return Response({'error': 'Category required hai'}, status=400)
+        if not restaurant_ids:
+            return Response({'error': 'Kam se kam ek restaurant select karo'}, status=400)
+ 
+        # MasterFood create karo
+        master = MasterFood.objects.create(
+            name=name,
+            description=description,
+            image=image,
+            category=category,
+        )
+ 
+        # Sirf selected restaurants ke liye RestaurantMenuItem banao
+        created = []
+        skipped = []
+        for rid in restaurant_ids:
+            try:
+                restaurant = Restaurant.objects.get(
+                    id=rid,
+                    status='active',
+                    is_discarded=False
+                )
+                obj, was_created = RestaurantMenuItem.objects.get_or_create(
+                    restaurant=restaurant,
+                    master_food=master,
+                    defaults={
+                        'price': price,
+                        'is_available': True,
+                        'prep_time': prep_time,
+                    }
+                )
+                
+                if was_created:
+                    created.append(restaurant.name)
+                else:
+                    skipped.append(restaurant.name)
+            except Restaurant.DoesNotExist:
+                skipped.append(f"ID {rid} not found")
+ 
+        return Response({
+            'message': f'Master food "{name}" add ho gaya!',
+            'master_food_id': master.id,
+            'linked_restaurants': created,
+            'skipped': skipped,
+        }, status=201)
+ 
+ 
+# 2. Ye NEW function add karo — restaurant options ke liye
+#    (modal mein checkboxes populate karne ke liye)
+@api_view(['GET'])
+def master_food_restaurant_options(request):
+    """Active restaurants ki list — master food add karte waqt
+       super admin yahan se restaurants select karega"""
+    restaurants = Restaurant.objects.filter(
+        status='active',
+        is_discarded=False
+    ).values('id', 'name', 'location')
+    return Response(list(restaurants))
+ 
 
-        available_items = [m for m in menu_items if m.is_available and m.price > 0]
 
-        # ✅ Seedha .url use karo — Cloudinary automatically absolute URL deta hai
-        image_url = food.image.url if food.image else None
-
-        result.append({
-            'id': food.id,
-            'name': food.name,
-            'description': food.description,
-            'image': image_url,
-            'category': food.category,
-            'restaurant_count': menu_items.count(),
-            'min_price': str(min([m.price for m in available_items], default=0)),
-        })
-    return Response(result)
 
 
 @api_view(['GET'])
