@@ -687,6 +687,8 @@ def dashboard_metrics(request):
     if restaurant_id in ('null', '', None):
         restaurant_id = None
 
+    RESTAURANT_SHARE = 0.85  # ← Add karo yahan
+
     if restaurant_id:
         order_nums = get_restaurant_order_numbers(restaurant_id)
         order_addresses = OrderAddress.objects.filter(order_number__in=order_nums)
@@ -708,6 +710,17 @@ def dashboard_metrics(request):
         ).aggregate(total_amount=Sum('line_total'))['total_amount'] or 0.0
         return round(total, 2)
 
+    raw_today  = get_sales(today_date)
+    raw_week   = get_sales(start_of_week)
+    raw_month  = get_sales(start_of_month)
+    raw_year   = get_sales(start_of_year)
+
+    # ✅ Restaurant ke liye 85% apply karo, super admin ke liye full amount
+    def apply_share(amount):
+        if restaurant_id:
+            return round(float(amount) * RESTAURANT_SHARE, 2)
+        return amount
+
     data = {
         "total_orders": order_addresses.count(),
         "new_orders": order_addresses.filter(order_final_status__isnull=True).count(),
@@ -720,10 +733,10 @@ def dashboard_metrics(request):
         "total_categories": Category.objects.filter(restaurant_id=restaurant_id).count() if restaurant_id else Category.objects.count(),
         "total_reviews": Review.objects.count(),
         "total_wishlists": Wishlist.objects.count(),
-        "today_sales": get_sales(today_date),
-        "week_sales": get_sales(start_of_week),
-        "month_sales": get_sales(start_of_month),
-        "year_sales": get_sales(start_of_year),
+        "today_sales":  apply_share(raw_today),   # ✅ 85% agar restaurant hai
+        "week_sales":   apply_share(raw_week),
+        "month_sales":  apply_share(raw_month),
+        "year_sales":   apply_share(raw_year),
     }
     return Response(data)
 
@@ -1441,49 +1454,79 @@ def verify_razorpay_payment(request):
 def restaurant_sales_summary(request, restaurant_id):
     today = now().date()
 
-    # ✅ Restaurant ka naam nikalo
+    RESTAURANT_SHARE = 0.85
+    ADMIN_SHARE = 0.15
+
     try:
         restaurant = Restaurant.objects.get(id=restaurant_id)
         restaurant_name = restaurant.name
     except Restaurant.DoesNotExist:
         return Response({"error": "Restaurant not found"}, status=404)
 
-    def get_rev(start):
-        order_numbers = OrderAddress.objects.filter(
-            order_time__date__gte=start
-        ).values_list('order_number', flat=True)
-
-        return Order.objects.filter(
+    def get_revenue(start=None):
+        qs = Order.objects.filter(
             food__restaurant_id=restaurant_id,
             is_order_placed=True,
-            order_number__in=order_numbers
-        ).annotate(
+        )
+        if start:
+            order_numbers = OrderAddress.objects.filter(
+                order_time__date__gte=start
+            ).values_list('order_number', flat=True)
+            qs = qs.filter(order_number__in=order_numbers)
+        total = qs.annotate(
             lt=F('quantity') * F('food__item_price')
         ).aggregate(t=Sum('lt'))['t'] or 0
+        return float(total)
 
-    # ✅ Total revenue (ALL TIME)
-    total_revenue = Order.objects.filter(
-        food__restaurant_id=restaurant_id,
-        is_order_placed=True
-    ).annotate(
-        lt=F('quantity') * F('food__item_price')
-    ).aggregate(t=Sum('lt'))['t'] or 0
+    def get_orders(start=None):
+        qs = Order.objects.filter(
+            food__restaurant_id=restaurant_id,
+            is_order_placed=True,
+        )
+        if start:
+            order_numbers = OrderAddress.objects.filter(
+                order_time__date__gte=start
+            ).values_list('order_number', flat=True)
+            qs = qs.filter(order_number__in=order_numbers)
+        return qs.values('order_number').distinct().count()
 
-    # ✅ Total orders
-    total_orders = Order.objects.filter(
-        food__restaurant_id=restaurant_id,
-        is_order_placed=True
-    ).values('order_number').distinct().count()
+    today_rev  = get_revenue(today)
+    week_rev   = get_revenue(today - timedelta(days=7))
+    month_rev  = get_revenue(today - timedelta(days=30))
+    year_rev   = get_revenue(today - timedelta(days=365))
+    total_rev  = get_revenue()
 
     return Response({
         "restaurant_id": restaurant_id,
-        "restaurant_name": restaurant_name,   # ✅ NEW
-        "total_orders": total_orders,         # ✅
-        "total_revenue": total_revenue,       # ✅ NEW
+        "restaurant_name": restaurant_name,
 
-        # Optional (analytics ke liye useful)
-        "day":   get_rev(today),
-        "week":  get_rev(today - timedelta(days=7)),
-        "month": get_rev(today - timedelta(days=30)),
-        "year":  get_rev(today - timedelta(days=365)),
+        # All-time totals
+        "total_orders":        get_orders(),
+        "total_revenue":       total_rev,
+        "restaurant_profit":   round(total_rev * RESTAURANT_SHARE, 2),
+        "admin_revenue":       round(total_rev * ADMIN_SHARE, 2),
+
+        # Sales
+        "day":   today_rev,
+        "week":  week_rev,
+        "month": month_rev,
+        "year":  year_rev,
+
+        # Orders count
+        "orders_today":  get_orders(today),
+        "orders_week":   get_orders(today - timedelta(days=7)),
+        "orders_month":  get_orders(today - timedelta(days=30)),
+        "orders_year":   get_orders(today - timedelta(days=365)),
+
+        # Restaurant 75% profit
+        "restaurant_profit_today":  round(today_rev * RESTAURANT_SHARE, 2),
+        "restaurant_profit_week":   round(week_rev  * RESTAURANT_SHARE, 2),
+        "restaurant_profit_month":  round(month_rev * RESTAURANT_SHARE, 2),
+        "restaurant_profit_year":   round(year_rev  * RESTAURANT_SHARE, 2),
+
+        # Admin 15% revenue
+        "admin_revenue_today":  round(today_rev * ADMIN_SHARE, 2),
+        "admin_revenue_week":   round(week_rev  * ADMIN_SHARE, 2),
+        "admin_revenue_month":  round(month_rev * ADMIN_SHARE, 2),
+        "admin_revenue_year":   round(year_rev  * ADMIN_SHARE, 2),
     })
