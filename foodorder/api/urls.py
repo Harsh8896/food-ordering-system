@@ -1,4 +1,3 @@
-
 from django.urls import path
 from .views import *
 
@@ -10,8 +9,14 @@ urlpatterns = [
     path("add-food-item/", add_food_item, name="add_food"),
     path("food_search/", food_search, name="food_search"),
     path("random_foods/", random_foods, name="random_foods"),
-    path("register/", register_user, name="register_user"),
-    path("login/", login_user, name="login_user"),
+
+    # ── JWT Auth ── ✅ purane register/login replace ho gaye
+    path("register/", register_user_jwt, name="register_user"),
+    path("login/",    login_user_jwt,    name="login_user"),
+    path("token/refresh/", refresh_token, name="token_refresh"),
+    path("me/",       get_current_user,  name="get_current_user"),
+    path("logout/",   logout_user,       name="logout_user"),
+
     path("foods/<int:id>/", food_detail, name="food_detail"),
     path("cart/add/", add_to_cart, name="add_to_cart"),
     path("cart/<int:user_id>/", add_cart_item, name="add_cart_item"),
@@ -41,7 +46,6 @@ urlpatterns = [
     path('edit-food/<int:id>/', edit_food),
     path('users/', list_users),
     path('delete_user/<int:id>/', delete_user),
-    path('edit-food/<int:id>/', edit_food),
     path('dashboard_metrics/', dashboard_metrics),
     path('monthly_sales_summary/', monthly_sales_summary, name='monthly_sales_summary'),
     path('top_selling_foods/', top_selling_foods, name='top_selling_foods'),
@@ -55,7 +59,6 @@ urlpatterns = [
     path('food_rating_summary/<int:food_id>/', food_rating_summary),
     path('all-reviews/', all_reviews),
     path('delete_review/<int:id>/', delete_review),
-    path('orders-delivered/', food_delivered, name='food_delivered'),
 
     path('restaurants/', restaurant_list, name='restaurant_list'),
     path('restaurants/<int:id>/', restaurant_detail, name='restaurant_detail'),
@@ -74,4 +77,12 @@ urlpatterns = [
     path('restaurant-sales-summary/<int:restaurant_id>/', restaurant_sales_summary, name='restaurant_sales_summary'),
     path('master-food-restaurant-options/', master_food_restaurant_options, name='master_food_restaurant_options'),
 
+    # # ── Delivery Partner ──
+    # path('delivery/login/',         delivery_partner_login,  name='delivery_login'),
+    # path('delivery/pending/',       delivery_pending_orders, name='delivery_pending'),
+    # path('delivery/respond/',       delivery_respond,        name='delivery_respond'),
+    # path('delivery/update-status/', delivery_update_status,  name='delivery_update_status'),
+    # path('delivery/location/',      delivery_update_location,name='delivery_location'),
+    # path('delivery/assign/',        delivery_assign,         name='delivery_assign'),
+    # path('delivery/status/<str:order_number>/', delivery_status, name='delivery_status'),
 ]

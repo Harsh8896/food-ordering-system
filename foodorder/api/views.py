@@ -14,6 +14,14 @@ from collections import defaultdict
 from django.db.models.functions import TruncMonth, Coalesce, TruncWeek
 import random
 
+# ── JWT Authentication APIs ──────────────────────────
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import authentication_classes, permission_classes
+import re
+
 
 # ── Helper: Restaurant ke order numbers nikalna ──
 def get_restaurant_order_numbers(restaurant_id):
@@ -1530,3 +1538,222 @@ def restaurant_sales_summary(request, restaurant_id):
         "admin_revenue_month":  round(month_rev * ADMIN_SHARE, 2),
         "admin_revenue_year":   round(year_rev  * ADMIN_SHARE, 2),
     })
+
+
+def validate_email(email):
+    return re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email or '')
+
+def validate_mobile(mobile):
+    return re.match(r'^[6-9]\d{9}$', str(mobile or ''))
+
+def validate_password(password):
+    """Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char"""
+    if not password or len(password) < 8:
+        return False, "Password must be at least 8 characters"
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character"
+    return True, "OK"
+
+
+# ── Register with full validation ──
+@api_view(['POST'])
+def register_user_jwt(request):
+    first_name = (request.data.get('firstname') or '').strip()
+    last_name  = (request.data.get('lastname')  or '').strip()
+    email      = (request.data.get('email')     or '').strip().lower()
+    mobile     = (request.data.get('mobile')    or '').strip()
+    password   =  request.data.get('password')  or ''
+
+    errors = {}
+
+    # ── Field presence ──
+    if not first_name:
+        errors['firstname'] = 'First name is required'
+    elif len(first_name) < 2:
+        errors['firstname'] = 'First name must be at least 2 characters'
+    elif not re.match(r'^[A-Za-z\s]+$', first_name):
+        errors['firstname'] = 'First name can only contain letters'
+
+    if not last_name:
+        errors['lastname'] = 'Last name is required'
+    elif len(last_name) < 2:
+        errors['lastname'] = 'Last name must be at least 2 characters'
+    elif not re.match(r'^[A-Za-z\s]+$', last_name):
+        errors['lastname'] = 'Last name can only contain letters'
+
+    if not email:
+        errors['email'] = 'Email is required'
+    elif not validate_email(email):
+        errors['email'] = 'Enter a valid email address'
+    elif User.objects.filter(email=email).exists():
+        errors['email'] = 'This email is already registered'
+
+    if not mobile:
+        errors['mobile'] = 'Mobile number is required'
+    elif not validate_mobile(mobile):
+        errors['mobile'] = 'Enter a valid 10-digit Indian mobile number'
+    elif User.objects.filter(mobile=mobile).exists():
+        errors['mobile'] = 'This mobile number is already registered'
+
+    if not password:
+        errors['password'] = 'Password is required'
+    else:
+        valid, msg = validate_password(password)
+        if not valid:
+            errors['password'] = msg
+
+    if errors:
+        return Response({'message': 'Validation failed', 'errors': errors}, status=400)
+
+    user = User.objects.create(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        mobile=mobile,
+        password=make_password(password),
+    )
+
+    tokens = get_tokens_for_user_custom(user)
+    return Response({
+        'message': 'Account created successfully!',
+        'userId':   user.id,
+        'userName': f'{user.first_name} {user.last_name}',
+        'access':   tokens['access'],
+        'refresh':  tokens['refresh'],
+    }, status=201)
+
+
+# ── Login with validation ──
+@api_view(['POST'])
+def login_user_jwt(request):
+    from django.db.models import Q
+    email    = (request.data.get('email')    or '').strip()
+    password =  request.data.get('password') or ''
+
+    errors = {}
+
+    if not email:
+        errors['email'] = 'Email or mobile number is required'
+    if not password:
+        errors['password'] = 'Password is required'
+
+    if errors:
+        return Response({'message': 'Validation failed', 'errors': errors}, status=400)
+
+    try:
+        user = User.objects.get(Q(email=email) | Q(mobile=email))
+        if not check_password(password, user.password):
+            return Response({
+                'message': 'Validation failed',
+                'errors': {'password': 'Incorrect password'}
+            }, status=401)
+    except User.DoesNotExist:
+        return Response({
+            'message': 'Validation failed',
+            'errors': {'email': 'No account found with this email or mobile'}
+        }, status=401)
+
+    tokens = get_tokens_for_user_custom(user)
+    return Response({
+        'message': 'Login Successful',
+        'userId':   user.id,
+        'userName': f'{user.first_name} {user.last_name}',
+        'access':   tokens['access'],
+        'refresh':  tokens['refresh'],
+    }, status=200)
+
+
+# ── Token helpers (same as before) ──
+def get_tokens_for_user_custom(user_obj):
+    import datetime
+    import jwt
+    from django.conf import settings
+
+    payload = {
+        'user_id': user_obj.id,
+        'email':   user_obj.email,
+        'name':    f'{user_obj.first_name} {user_obj.last_name}',
+        'exp':     datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        'iat':     datetime.datetime.utcnow(),
+        'type':    'access',
+    }
+    refresh_payload = {
+        **payload,
+        'exp':  datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        'type': 'refresh',
+    }
+    secret  = settings.SECRET_KEY
+    access  = jwt.encode(payload,         secret, algorithm='HS256')
+    refresh = jwt.encode(refresh_payload, secret, algorithm='HS256')
+    return {'access': access, 'refresh': refresh}
+
+
+@api_view(['POST'])
+def refresh_token(request):
+    import jwt, datetime
+    from django.conf import settings
+
+    token = request.data.get('refresh')
+    if not token:
+        return Response({'message': 'Refresh token required'}, status=400)
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        if payload.get('type') != 'refresh':
+            return Response({'message': 'Invalid token type'}, status=401)
+        user = User.objects.get(id=payload['user_id'])
+        new_payload = {
+            'user_id': user.id,
+            'email':   user.email,
+            'name':    f'{user.first_name} {user.last_name}',
+            'exp':     datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            'iat':     datetime.datetime.utcnow(),
+            'type':    'access',
+        }
+        new_access = jwt.encode(new_payload, settings.SECRET_KEY, algorithm='HS256')
+        return Response({'access': new_access}, status=200)
+    except jwt.ExpiredSignatureError:
+        return Response({'message': 'Refresh token expired, please login again'}, status=401)
+    except Exception:
+        return Response({'message': 'Invalid token'}, status=401)
+
+
+def verify_jwt_token(request):
+    import jwt
+    from django.conf import settings
+
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None, Response({'message': 'Authentication required'}, status=401)
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        user = User.objects.get(id=payload['user_id'])
+        return user, None
+    except jwt.ExpiredSignatureError:
+        return None, Response({'message': 'Token expired, please login again'}, status=401)
+    except Exception:
+        return None, Response({'message': 'Invalid token'}, status=401)
+
+
+@api_view(['GET'])
+def get_current_user(request):
+    user, error = verify_jwt_token(request)
+    if error:
+        return error
+    return Response({
+        'userId':   user.id,
+        'userName': f'{user.first_name} {user.last_name}',
+        'email':    user.email,
+        'mobile':   user.mobile,
+    })
+
+
+@api_view(['POST'])
+def logout_user(request):
+    return Response({'message': 'Logged out successfully'}, status=200)
