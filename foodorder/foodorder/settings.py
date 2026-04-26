@@ -5,14 +5,19 @@ import cloudinary.uploader
 import cloudinary.api
 from dotenv import load_dotenv
 
-# ✅ .env file load karo
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-temp-key")
-DEBUG = os.getenv("DEBUG", "False") == "True"  # ✅ .env se aayega
-ALLOWED_HOSTS = ['*']
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+# ✅ Render URL aur localhost dono allow
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.onrender.com',  # ← sabhi render subdomains allow
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -61,7 +66,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodorder.wsgi.application'
 
-# ✅ DB — local aur Render dono pe kaam karega
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -70,6 +74,10 @@ DATABASES = {
         'PASSWORD': os.getenv("DB_PASSWORD", ""),
         'HOST': os.getenv("DB_HOST", "localhost"),
         'PORT': os.getenv("DB_PORT", "5432"),
+        # ✅ SSL fix — Render ke liye zaroori
+        'OPTIONS': {
+            'sslmode': 'require',
+        } if os.getenv("DB_HOST", "localhost") != "localhost" else {},
     }
 }
 
@@ -112,12 +120,27 @@ CLOUDINARY_STORAGE = {
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 
-# ── Django 4.2+ Storage Settings ──
+# ── Storage Settings ──
 STORAGES = {
     "default": {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# ✅ Production logging — memory issue fix
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
     },
 }
